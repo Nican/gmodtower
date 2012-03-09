@@ -1,0 +1,9 @@
+"AddonInfo"
+{
+	"name"			"GMTRedux Base"
+	"version"		"2"
+	"author_name"	"Nican"
+	"author_url"	"http://nican.net/"
+	"info"			""
+	"override"		"0"
+}

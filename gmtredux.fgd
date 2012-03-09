@@ -1,0 +1,6 @@
+@include "base.fgd"
+ 
+@PointClass base(Targetname) = npc_store : "A basic store entity"
+[
+	Store(string) : "Store type" : "Base" : "The store type to be open with this entity."
+]
