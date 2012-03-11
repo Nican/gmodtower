@@ -8,58 +8,60 @@ DEBUG = true
 ColumnInfo = {}
 LateLoadPlayers = {}
 
-
-tmysql.query( [[
+local StartUserTableQuery = [[
 CREATE TABLE IF NOT EXISTS `gm_users` (
   `id` int(11) unsigned NOT NULL DEFAULT '0',
   `steamid` varchar(20) DEFAULT NULL,
   `ip` varchar(15) DEFAULT NULL,
    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;	
-]], function( res, status, err )
-	if status != 1 then
-		Error( err )
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;	]]
+
+
+hook.Add("DatabaseConnect", "StartUserTable", function()
+
+	local query = getDB():query(StartUserTableQuery)
+	query.onSuccess = function( query )
+		SelectColumns()
 	end
+	query.onError = function( query, err )
+		error("Unable to load database: " .. tostring( err ) )
+	end
+
+	query:start()
+
 end )
 
-tmysql.query("DESCRIBE `gm_users`", function( res, status, err )
-	
-	if status != 1 then
-		ErrorNoHalt( "Could not get table description: " .. err )
-		return
-	end
-	
-	//ColumnInfo will hold the column informaton 
-	for _, v in pairs( res ) do
-	
-		ColumnInfo[ v[1] ] = v[2]
-	
-	end
-	
-	StartColums()
-	
-	if LateLoadPlayers then
+function SelectColumns()
+
+	local query = getDB():query("DESCRIBE `gm_users`")
+	query:SetOption(OPTION_NUMERIC_FIELDS, true )
+	query.onSuccess = function( query )
+		
+		if status != 1 then
+			ErrorNoHalt( "Could not get table description: " .. err )
+			return
+		end
+		
+		//ColumnInfo will hold the column informaton 
+		for _, v in pairs( query:getData() ) do
+			ColumnInfo[ v[1] ] = v[2]
+		end
+		
+		StartColums()
 		
 		for _, ply in pairs( LateLoadPlayers ) do
 			SafeCall( LoadPlayer, ply )
 		end
-		
+			
 		LateLoadPlayers = nil
-	
+		
+	end )
+
+	query.onError = function( query, err )
+		error("Unable to load database: " .. tostring( err ) )
 	end
-	
-end )
 
-local LogIp = "REPLACE INTO `gm_log_ip`(`user`,`ip`) VALUES (%s,INET_ATON('%s'))"
-
-function LoadPlayer( ply )
-	
-	ply.SQL = SQLPlayer.Init( ply )
-	ply.SQL:ExecuteSelect()
-	
-	ply.NextSQLUpdate = CurTime() + 5
-	
-	tmysql.query( string.format( LogIp, ply:SQLId(), ply.SQL:GetIP() ), SQLBasicResult )
+	query:start()
 
 end
 
@@ -107,18 +109,19 @@ function StartColums()
 	
 end
 
-function SqlError( error )
+local LogIp = "REPLACE INTO `gm_log_ip`(`user`,`ip`) VALUES (%s,INET_ATON('%s'))"
+function LoadPlayer( ply )
+	ply.SQL = SQLPlayer.Init( ply )
+	ply.SQL:ExecuteSelect()
 	
-	local Match = string.match ( error, "Table '([%a_]+)' is marked as crashed and should be repaired" )
-	
-	if Match then
-		
-		SQLLog('error', Match .. " marked as crashed. Repairing it." )
-		
-		tmysql.query( "REPAIR TABLE `".. Match .."`", RepairCallback )
-	
-	end
+	ply.NextSQLUpdate = CurTime() + 5
 
+	local query = getDB():query( string.format( LogIp, ply:SQLId(), ply.SQL:GetIP() ) )
+	query.onError = function( query, err )
+		print("Could not log player ip: " .. tostring(err) )
+	end
+	query:start()
+	
 end
 
 RepairCallback = function( res, status, error )

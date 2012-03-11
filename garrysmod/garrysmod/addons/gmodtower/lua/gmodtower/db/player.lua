@@ -67,14 +67,23 @@ function ExecuteSelect( self )
 		return
 	end
 	
-	local Query = self:GetSelectQuery()
+	local selectStatment = self:GetSelectQuery()
 	
-	if Query == nil then
+	if selectStatment == nil then
 		self:NewSelectAttemp( 3.0 )
 		return
 	end
-	
-	tmysql.query( Query, self.SelectCallback, 1, self )
+
+	local query = getDB():query( selectStatment )
+
+	query.onSuccess = function( query )
+		self:SelectCallback( query:getData() )
+	end
+	query.onError = function( query, err )
+		SQLLog('error', "Select error:" .. error )
+		self:NewSelectAttemp()	
+	end
+
 
 end
 
@@ -92,16 +101,9 @@ function NewSelectAttemp( self, time )
 
 end
 
-function SelectCallback( self, res, status, error )
+function SelectCallback( self, res )
 	
 	if !self:Valid() then
-		return
-	end
-	
-	if status != 1 then
-		SQLLog('error', "Select error:" .. error )
-		self:NewSelectAttemp()
-		SQL.SqlError( error )		
 		return
 	end
 	
@@ -170,29 +172,29 @@ end
     ================================================ */
 	
 function InsertPlayer( self )
-	
-	tmysql.query( 
-		"INSERT INTO `gm_users`(id, steamid, name, ip) VALUES ("
-		..self:SQLId()..",'"..tostring(self.Player:SteamID()).."','"..tmysql.escape(self.Player:Name()) .."', '".. tostring(self:GetIP()) .."')", 
-		self.InsertCallback, 0, self )
+
+	local db = SQL.getDB()
+	local insertStatment = string.format( "INSERT INTO `gm_users`(id, steamid, name, ip) VALUES (%d, '%s', '%s', '%s')",
+		self:SQLId(), self.Player:SteamID(), db:escape(self.Player:Name()), self:GetIP() )
+
+	local query = db:query(insertStatment)
+
+	insertStatment.onSuccess = function( query )
+		self.Connected = true
+	end
+
+	insertStatment.onError = function( query, err)
+		ErrorNoHalt("PLAYER INSERT ERROR: " .. err )
+	end
+
+	query:start()
+
 	
 end
 
 function GetIP( self )
 	return string.match( self.Player:IPAddress() , "(%d+%.%d+%.%d+%.%d+)" )
 end
-
-function InsertCallback( self, res, status, error )
-	
-	if status != 1 then
-		ErrorNoHalt("PLAYER INSERT ERROR: " .. error )
-		return
-	end
-	
-	self.Connected = true
-	
-end
-
 
 /*==============================================
 	UPDATE STATEMNTS
@@ -256,32 +258,35 @@ function Update( self, ondisconnect, force )
 		return
 	end
 	self.UpdateQuery = "UPDATE gm_users SET " .. table.concat( ToUpdate, "," ) .. " WHERE id=" .. self:SQLId()
-	
-	tmysql.query( self.UpdateQuery, self.UpdateCallback, nil, self )
+
+	local query = SQL.GetDB():query( self.UpdateQuery )
+
+	query.onSuccess = function( query )
+		self:FinishUpdate()
+	end
+
+	query.onError = function( query, err )
+		self:FinishUpdate()
+		SQLLog('error', "Update player: ", err, "\n", self.UpdateQuery )
+	end
 	
 	self.UpdateInProgress = true	
 	hook.Call("ClientUpdated", GAMEMODE, self.Player, ondisconnect )
 	
 	if ondisconnect == true then
-		//SQLLog('sqldebug', "Updated player on disconnect " .. tostring(self.Player) )
-
 		//Well, all data should have been commited, and no longer should be updated
 		self.Connected = false
 		
 		hook.Call("DisconnectPost", GAMEMODE, self.Player )
 	end
+
+	query:start()
 	
 end
 	
-function UpdateCallback( self, res, status, err )
+function FinishUpdate( self )
 	self.UpdateInProgress = false
 	self.NextUpdate = CurTime() + UpdateTime
-	
-	if status != 1 then
-		SQLLog('error', "Update player: ", err, "\n", self.UpdateQuery )
-		SQL.SqlError( err )
-	end
-	
 	self.UpdateQuery = nil
 
 end

@@ -18,7 +18,7 @@ hook.Add("SQLStartColumns", "StartBasicColumns", function()
 	SQLColumn.Init( {
 		["column"] = "name",
 		["fullupdate"] = function( ply ) 
-			return "`name`='" .. tmysql.escape(ply:Name()) .. "'"
+			return "`name`='" .. SQL.getDB():escape(ply:Name()) .. "'"
 		end,
 	} )
 	

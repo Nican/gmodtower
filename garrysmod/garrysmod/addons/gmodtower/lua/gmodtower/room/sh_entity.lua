@@ -1,80 +1,60 @@
-
-
 module("Room", package.seeall )
 
-NPC = NPC or {}
+ROOMENT = ROOMENT or {}
 
-NPC.Type 				= "ai"
-NPC.Base 				= "base_anim"
-NPC.PrintName		= "Store NPC"
-NPC.Author		= "Nican"
-NPC.Contact		= ""
-NPC.Purpose		= ""
-NPC.Instructions	= ""
-NPC.Spawnable		= false
-NPC.AdminSpawnable	= true
+ROOMENT.Type 				= "anim"
+ROOMENT.Base 				= "base_entity"
+ROOMENT.PrintName		= "Room Networking"
+ROOMENT.Author		= "Nican"
+ROOMENT.Contact		= ""
+ROOMENT.Purpose		= ""
+ROOMENT.Instructions	= ""
+ROOMENT.Spawnable		= false
+ROOMENT.AdminSpawnable	= false
 
-if SERVER then
-
-function NPC:SpawnFunction( ply, tr )
-	if ( !tr.Hit ) then return end
+function ROOMENT:Initialize()
 	
-	local ent = ents.Create( "npc_store" )
-	ent:SetPos( tr.HitPos + Vector(0,0,1) )	
-	ent:KeyValue("Store", "First")
-	ent:SetModel(Model( "models/Humans/Group01/Female_01.mdl"))
-	ent:DropToFloor()
-	ent:Spawn()
-	ent:Activate()
-	
-	return ent
 end
 
-function NPC:ErrorRemove()
-	print("Store entity ", self, " does not have a valid store.")
-	timer.Simple( 1.0, SafeRemoveEntity, self )
+function ROOMENT:GetId()
+	return self:GetDTInt( 0 )
 end
 
-function NPC:Initialize()
-	self:SetHullType( HULL_HUMAN );
-	self:SetHullSizeNormal();
-
-	self:SetSolid( SOLID_BBOX )
-	self:SetMoveType( MOVETYPE_STEP )
-	self:SetCollisionGroup( COLLISION_GROUP_DEBRIS_TRIGGER )
-
-	self:CapabilitiesAdd( CAP_USE | CAP_OPEN_DOORS | CAP_FRIENDLY_DMG_IMMUNE | CAP_SQUAD | CAP_TURN_HEAD )
-	
-	self:SetHealth( 100 )
-	
-	if not self.Store then
-		self:ErrorRemove()
-	end
+function ROOMENT:SetId( id )
+	self:SetDTInt( 0, id )
 end
 
-function NPC:KeyValue( key, value )
-	if key == "Store" then
-		local valid, Store = SafeCall( Get, value )
-		
-		if not valid then
-			self:ErrorRemove()
-			return
-		end
-		
-		self.Store = Store		
-	end	
+function ROOMENT:IsLoaded()
+	return self:GetDTBool( 0 )
 end
 
-function NPC:AcceptInput( name, activator, ply )
-	if not self.Store then
-		ply:ChatPrint("NPC does not have a valid store.")
-		return
+function ROOMENT:SetLoaded( loaded )
+	self:SetDTBool( 0, loaded )
+end
+
+
+function ROOMENT:GetBounds()
+	return self:GetDTVector( 0 ), self:GetDTVector( 1 )
+end
+
+function ROOMENT:SetetBounds( min, max )
+	self:SetDTVector( 0, min )
+	self:SetDTVector( 1, max )
+end
+
+function ROOMENT:Think()
+
+	if SERVER then
+		self:ThinkLoadEntities()
 	end
 
-    if name == "Use" && ply:IsPlayer() && ply:KeyDownLast(IN_USE) == false then
-		Open( ply, self.Store )
-    end
 end
-end --SERVER
 
-scripted_ents.Register( NPC , "npc_store", true )
+function ROOMENT:Draw()
+end
+
+function ROOMENT:UpdateTransmitState() 
+	return TRANSMIT_ALWAYS 
+end
+
+scripted_ents.Register( ROOMENT , "gmt_roomloc", true )
