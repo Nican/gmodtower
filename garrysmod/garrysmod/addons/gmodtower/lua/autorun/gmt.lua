@@ -47,16 +47,19 @@ function Load()
 	IncludeDir( "gmodtower/util/" ) 
 
 	if SERVER then
+		include("gmodtower/sql.lua")
 		include("gmodtower/db/init.lua")
 		include("gmodtower/inventory/init.lua")
 		include("gmodtower/group/init.lua")
 		include("gmodtower/topmenu/init.lua")
 		include("gmodtower/scoreboard/init.lua")
+		include("gmodtower/room/init.lua")
 	else
 		include("gmodtower/inventory/cl_init.lua")
 		include("gmodtower/group/cl_init.lua")
 		include("gmodtower/topmenu/cl_init.lua")
 		include("gmodtower/scoreboard/cl_init.lua")
+		include("gmodtower/room/cl_init.lua")
 	end
 
 	IncludeDir( "gmodtower/base/" ) 

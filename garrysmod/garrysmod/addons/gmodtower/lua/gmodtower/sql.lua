@@ -2,14 +2,14 @@ require("mysqloo")
 
 module("SQL", package.seeall )
 
-Connected = false
+Connected = Connected or false
 
 if !mysqloo then
 	error("mysqloo module not found")
 	return
 end
 
-local databaseObject = mysqloo.connect("localhost", "root", "", "gmodtower", 3306 )
+databaseObject = databaseObject or mysqloo.connect("192.168.1.133", "nican", "", "gmodtower", 3306 )
 
 
 databaseObject.onConnected = function(database)
@@ -22,7 +22,9 @@ databaseObject.onConnectionFailed = function(db, err)
 	ErrorNoHalt("Failed to connect to DB: " .. tostring( err ) )
 end
 
-databaseObject:connect()
+if not Connected then
+	databaseObject:connect()
+end
 
 function getDB()
 	return databaseObject

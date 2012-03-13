@@ -5,8 +5,11 @@ include("basic.lua")
 module("SQL", package.seeall )
 
 DEBUG = true
-ColumnInfo = {}
-LateLoadPlayers = {}
+ColumnInfo = ColumnInfo or {}
+
+if not Connected then
+	LateLoadPlayers = {}
+end
 
 local StartUserTableQuery = [[
 CREATE TABLE IF NOT EXISTS `gm_users` (
@@ -55,7 +58,7 @@ function SelectColumns()
 			
 		LateLoadPlayers = nil
 		
-	end )
+	end
 
 	query.onError = function( query, err )
 		error("Unable to load database: " .. tostring( err ) )
